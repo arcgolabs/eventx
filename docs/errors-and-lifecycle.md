@@ -31,7 +31,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/DaiYuANg/arcgo/eventx"
+	"github.com/arcgolabs/eventx"
 )
 
 type Ping struct{}
@@ -63,4 +63,3 @@ func main() {
 
 - [Getting Started](./getting-started)
 - [Async and middleware](./async-and-middleware)
-

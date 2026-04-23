@@ -7,11 +7,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/DaiYuANg/arcgo/collectionx"
-	"github.com/DaiYuANg/arcgo/logx"
-	logxfx "github.com/DaiYuANg/arcgo/logx/fx"
+	"github.com/arcgolabs/collectionx"
 	"github.com/arcgolabs/eventx"
 	eventxfx "github.com/arcgolabs/eventx/fx"
+	"github.com/arcgolabs/logx"
+	logxfx "github.com/arcgolabs/logx/fx"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 )

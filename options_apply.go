@@ -1,6 +1,6 @@
 package eventx
 
-import "github.com/DaiYuANg/arcgo/pkg/option"
+import "github.com/arcgolabs/pkg/option"
 
 func buildSubscribeOptions(opts ...SubscribeOption) subscribeOptions {
 	cfg := defaultSubscribeOptions()

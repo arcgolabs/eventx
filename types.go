@@ -4,7 +4,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/DaiYuANg/arcgo/collectionx"
+	"github.com/arcgolabs/collectionx"
 )
 
 // Event is the common event contract for strongly typed publish/subscribe.

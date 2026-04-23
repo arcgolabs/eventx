@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DaiYuANg/arcgo/observabilityx"
+	"github.com/arcgolabs/observabilityx"
 )
 
 func (b *Bus) observabilitySafe() observabilityx.Observability {

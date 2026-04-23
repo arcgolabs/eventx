@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/DaiYuANg/arcgo/collectionx"
-	"github.com/DaiYuANg/arcgo/observabilityx"
-	"github.com/DaiYuANg/arcgo/pkg/option"
+	"github.com/arcgolabs/collectionx"
+	"github.com/arcgolabs/observabilityx"
+	"github.com/arcgolabs/pkg/option"
 	"github.com/panjf2000/ants/v2"
 	"github.com/samber/lo"
 	"github.com/samber/mo"

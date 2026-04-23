@@ -18,7 +18,7 @@ This page shows a minimal program with:
 ## 1) Install
 
 ```bash
-go get github.com/DaiYuANg/arcgo/eventx@latest
+go get github.com/arcgolabs/eventx@latest
 ```
 
 ## 2) Create `main.go`
@@ -30,7 +30,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/DaiYuANg/arcgo/eventx"
+	"github.com/arcgolabs/eventx"
 )
 
 type UserCreated struct {
@@ -63,7 +63,7 @@ func main() {
 
 ```bash
 go mod init example.com/eventx-hello
-go get github.com/DaiYuANg/arcgo/eventx@latest
+go get github.com/arcgolabs/eventx@latest
 go run .
 ```
 
@@ -71,4 +71,3 @@ go run .
 
 - Async publishing and backpressure: [Async and middleware](./async-and-middleware)
 - Error model, shutdown, and ordering guarantees: [Errors and lifecycle](./errors-and-lifecycle)
-

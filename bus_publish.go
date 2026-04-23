@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/DaiYuANg/arcgo/observabilityx"
+	"github.com/arcgolabs/observabilityx"
 	"github.com/panjf2000/ants/v2"
 	"github.com/samber/oops"
 )

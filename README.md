@@ -12,7 +12,7 @@ weight: 4
 ## Install / Import
 
 ```bash
-go get github.com/DaiYuANg/arcgo/eventx@latest
+go get github.com/arcgolabs/eventx@latest
 ```
 
 ## Current capabilities
@@ -26,8 +26,8 @@ go get github.com/DaiYuANg/arcgo/eventx@latest
 
 ## Package layout
 
-- Core bus: `github.com/DaiYuANg/arcgo/eventx`
-- FX module (optional): `github.com/DaiYuANg/arcgo/eventx/fx`
+- Core bus: `github.com/arcgolabs/eventx`
+- FX module (optional): `github.com/arcgolabs/eventx/fx`
 
 ## Documentation map
 
@@ -57,17 +57,15 @@ Routing is based on the event’s concrete Go type. `Name()` is semantic metadat
 
 ## Runnable examples (repository)
 
-- [examples/eventx/basic](https://github.com/DaiYuANg/arcgo/tree/main/examples/eventx/basic)
-- [examples/eventx/middleware](https://github.com/DaiYuANg/arcgo/tree/main/examples/eventx/middleware)
-- [examples/eventx/observability](https://github.com/DaiYuANg/arcgo/tree/main/examples/eventx/observability)
-- [examples/eventx/fx](https://github.com/DaiYuANg/arcgo/tree/main/examples/eventx/fx)
+- [examples/basic](https://github.com/arcgolabs/eventx/tree/main/examples/basic)
+- [examples/middleware](https://github.com/arcgolabs/eventx/tree/main/examples/middleware)
+- [examples/fx](https://github.com/arcgolabs/eventx/tree/main/examples/fx)
 
 ## Integration Guide
 
 - With `dix`: build one bus per bounded context and manage lifecycle with app hooks.
 - With `observabilityx`: attach observability middleware for event throughput, latency, and error metrics.
 - With `logx`: emit structured event type and handler category logs around failure paths.
-- With `httpx`: publish domain events from handlers after validation and service-layer commit points.
 
 ## Testing tips
 

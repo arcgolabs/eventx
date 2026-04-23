@@ -3,7 +3,7 @@ package eventx
 import (
 	"context"
 
-	"github.com/DaiYuANg/arcgo/observabilityx"
+	"github.com/arcgolabs/observabilityx"
 	"github.com/samber/lo"
 )
 

@@ -15,7 +15,7 @@ weight: 3
 ## 1) Install
 
 ```bash
-go get github.com/DaiYuANg/arcgo/eventx@latest
+go get github.com/arcgolabs/eventx@latest
 ```
 
 ## 2) Create `main.go`
@@ -36,7 +36,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/DaiYuANg/arcgo/eventx"
+	"github.com/arcgolabs/eventx"
 )
 
 type OrderPaid struct {
@@ -93,5 +93,4 @@ func main() {
 
 - [Getting Started](./getting-started)
 - [Errors and lifecycle](./errors-and-lifecycle)
-- Runnable examples in repo: [examples/eventx](https://github.com/DaiYuANg/arcgo/tree/main/examples/eventx)
-
+- Runnable examples in repo: [examples](https://github.com/arcgolabs/eventx/tree/main/examples)
