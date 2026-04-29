@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arcgolabs/collectionx"
+	collectionlist "github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/observabilityx"
 	"github.com/samber/lo"
 )
@@ -98,7 +98,7 @@ func (b *Bus) dispatchParallel(ctx context.Context, event Event, handlers []Hand
 	wg.Wait()
 	close(errCh)
 
-	errs := collectionx.NewListWithCapacity[error](len(handlers))
+	errs := collectionlist.NewListWithCapacity[error](len(handlers))
 	for err := range errCh {
 		errs.Add(err)
 	}

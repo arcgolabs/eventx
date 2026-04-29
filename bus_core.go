@@ -5,7 +5,8 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/arcgolabs/collectionx"
+	collectionlist "github.com/arcgolabs/collectionx/list"
+	collectionmapping "github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/observabilityx"
 	"github.com/arcgolabs/pkg/option"
 	"github.com/panjf2000/ants/v2"
@@ -19,7 +20,7 @@ type Bus struct {
 	closed        bool
 	nextID        uint64
 	subsByType    subscriptionTable
-	handlerCache  collectionx.ConcurrentMap[reflect.Type, []HandlerFunc]
+	handlerCache  *collectionmapping.ConcurrentMap[reflect.Type, []HandlerFunc]
 	parallel      bool
 	parallelLimit chan struct{}
 	middleware    []Middleware
@@ -75,8 +76,8 @@ func New(opts ...Option) BusRuntime {
 	option.Apply(&cfg, opts...)
 
 	b := &Bus{
-		subsByType:    collectionx.NewConcurrentTable[reflect.Type, uint64, *subscription](),
-		handlerCache:  collectionx.NewConcurrentMap[reflect.Type, []HandlerFunc](),
+		subsByType:    collectionmapping.NewConcurrentTable[reflect.Type, uint64, *subscription](),
+		handlerCache:  collectionmapping.NewConcurrentMap[reflect.Type, []HandlerFunc](),
 		parallel:      cfg.parallel,
 		parallelLimit: newParallelLimiter(cfg.antsPoolSize),
 		middleware:    cfg.middleware,
@@ -85,7 +86,7 @@ func New(opts ...Option) BusRuntime {
 	}
 	b.logger = b.observability.Logger().With("component", "eventx.bus")
 
-	poolOpts := collectionx.NewListWithCapacity[ants.Option](3,
+	poolOpts := collectionlist.NewListWithCapacity[ants.Option](3,
 		ants.WithPreAlloc(true),
 		ants.WithNonblocking(false),
 	)
@@ -149,12 +150,12 @@ func (b *Bus) SubscriberCount() int {
 }
 
 // GetHandlersGroupedByEventType returns a snapshot of active handlers grouped by event type.
-func (b *Bus) GetHandlersGroupedByEventType() collectionx.MultiMap[reflect.Type, HandlerFunc] {
+func (b *Bus) GetHandlersGroupedByEventType() *collectionmapping.MultiMap[reflect.Type, HandlerFunc] {
 	if b == nil {
-		return collectionx.NewMultiMap[reflect.Type, HandlerFunc]()
+		return collectionmapping.NewMultiMap[reflect.Type, HandlerFunc]()
 	}
 
-	grouped := collectionx.NewMultiMapWithCapacity[reflect.Type, HandlerFunc](b.subsByType.RowCount())
+	grouped := collectionmapping.NewMultiMapWithCapacity[reflect.Type, HandlerFunc](b.subsByType.RowCount())
 	lo.ForEach(b.subsByType.RowKeys(), func(eventType reflect.Type, _ int) {
 		grouped.Set(eventType, b.snapshotHandlersByEventType(eventType)...)
 	})

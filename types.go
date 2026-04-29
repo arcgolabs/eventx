@@ -4,7 +4,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/arcgolabs/collectionx"
+	collectionmapping "github.com/arcgolabs/collectionx/mapping"
 )
 
 // Event is the common event contract for strongly typed publish/subscribe.
@@ -18,7 +18,7 @@ type BusRuntime interface {
 	PublishAsync(ctx context.Context, event Event) error
 	Close() error
 	SubscriberCount() int
-	GetHandlersGroupedByEventType() collectionx.MultiMap[reflect.Type, HandlerFunc]
+	GetHandlersGroupedByEventType() *collectionmapping.MultiMap[reflect.Type, HandlerFunc]
 
 	// subscribe is intentionally unexported so only eventx's own implementation
 	// can satisfy BusRuntime.
@@ -37,4 +37,4 @@ type publishTask struct {
 }
 
 // subscriptionTable is a concurrent table for storing subscriptions by (event type, subscription id).
-type subscriptionTable = collectionx.ConcurrentTable[reflect.Type, uint64, *subscription]
+type subscriptionTable = *collectionmapping.ConcurrentTable[reflect.Type, uint64, *subscription]

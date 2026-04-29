@@ -3,8 +3,9 @@ module github.com/arcgolabs/eventx
 go 1.26.2
 
 require (
-	github.com/arcgolabs/collectionx v0.2.0
-	github.com/arcgolabs/observabilityx v0.2.0
+	github.com/arcgolabs/collectionx/list v0.6.0
+	github.com/arcgolabs/collectionx/mapping v0.6.0
+	github.com/arcgolabs/observabilityx v0.3.0
 	github.com/arcgolabs/pkg/option v0.0.3
 	github.com/panjf2000/ants/v2 v2.12.0
 	github.com/samber/lo v1.53.0
@@ -14,13 +15,7 @@ require (
 )
 
 require (
-	github.com/arcgolabs/collectionx/internal v0.2.0 // indirect
-	github.com/arcgolabs/collectionx/interval v0.2.0 // indirect
-	github.com/arcgolabs/collectionx/list v0.2.0 // indirect
-	github.com/arcgolabs/collectionx/mapping v0.2.0 // indirect
-	github.com/arcgolabs/collectionx/prefix v0.2.0 // indirect
-	github.com/arcgolabs/collectionx/set v0.2.0 // indirect
-	github.com/arcgolabs/collectionx/tree v0.2.0 // indirect
+	github.com/arcgolabs/collectionx/internal v0.5.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect

@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/arcgolabs/collectionx"
+	collectionmapping "github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/eventx"
 	eventxfx "github.com/arcgolabs/eventx/fx"
 	"github.com/arcgolabs/logx"
@@ -81,7 +81,7 @@ func subscribeNotificationType(bus eventx.BusRuntime, logger *slog.Logger, cfg s
 			return nil
 		}
 
-		logx.WithFields(logger, collectionx.NewMapFrom(map[string]any{
+		logx.WithFields(logger, collectionmapping.NewMapFrom(map[string]any{
 			"user_id":  event.UserID,
 			"msg_type": cfg.msgType,
 		})).Info(cfg.logLabel)
@@ -115,7 +115,7 @@ func publishNotifications(ctx context.Context, bus eventx.BusRuntime, logger *sl
 	}
 
 	for i, event := range events {
-		logx.WithFields(logger, collectionx.NewMapFrom(map[string]any{
+		logx.WithFields(logger, collectionmapping.NewMapFrom(map[string]any{
 			"index":   i + 1,
 			"type":    event.Type,
 			"user_id": event.UserID,
@@ -123,7 +123,7 @@ func publishNotifications(ctx context.Context, bus eventx.BusRuntime, logger *sl
 		})).Info("publish notification event")
 
 		if err := bus.PublishAsync(ctx, event); err != nil {
-			logx.WithError(logx.WithFields(logger, collectionx.NewMapFrom(map[string]any{
+			logx.WithError(logx.WithFields(logger, collectionmapping.NewMapFrom(map[string]any{
 				"event": event,
 			})), err).Error("publish event failed")
 		}
