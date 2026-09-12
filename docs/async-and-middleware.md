@@ -63,8 +63,7 @@ func main() {
 	)
 	defer func() { _ = bus.Close() }()
 
-	_, err := eventx.Subscribe[OrderPaid](
-		bus,
+	_, err := bus.Subscribe(
 		func(ctx context.Context, evt OrderPaid) error {
 			_ = ctx
 			fmt.Println("inventory update:", evt.OrderID)

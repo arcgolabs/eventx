@@ -5,7 +5,15 @@
 
 version: 2
 updates:
-  - package-ecosystem: "go" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "go"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "go"
+    directory: "/fx"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "go"
+    directory: "/examples"
     schedule:
       interval: "weekly"

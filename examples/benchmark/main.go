@@ -45,7 +45,7 @@ func main() {
 	printSummary(elapsed, batchSize, totalProcessed.Load(), totalErrors.Load(), bus.SubscriberCount())
 }
 
-func newBenchmarkBus(totalErrors *atomic.Int64) eventx.BusRuntime {
+func newBenchmarkBus(totalErrors *atomic.Int64) *eventx.Bus {
 	return eventx.New(
 		eventx.WithAntsPool(10),
 		eventx.WithParallelDispatch(true),
@@ -57,7 +57,7 @@ func newBenchmarkBus(totalErrors *atomic.Int64) eventx.BusRuntime {
 	)
 }
 
-func registerConsumers(bus eventx.BusRuntime, totalProcessed *atomic.Int64) error {
+func registerConsumers(bus *eventx.Bus, totalProcessed *atomic.Int64) error {
 	for consumerID := range 3 {
 		if err := subscribeConsumer(bus, totalProcessed, consumerID); err != nil {
 			return err
@@ -66,8 +66,8 @@ func registerConsumers(bus eventx.BusRuntime, totalProcessed *atomic.Int64) erro
 	return nil
 }
 
-func subscribeConsumer(bus eventx.BusRuntime, totalProcessed *atomic.Int64, consumerID int) error {
-	_, err := eventx.Subscribe[stockEvent](bus, func(_ context.Context, event stockEvent) error {
+func subscribeConsumer(bus *eventx.Bus, totalProcessed *atomic.Int64, consumerID int) error {
+	_, err := bus.Subscribe(func(_ context.Context, event stockEvent) error {
 		totalProcessed.Add(1)
 
 		time.Sleep(10 * time.Millisecond)
@@ -93,7 +93,7 @@ func subscribeConsumer(bus eventx.BusRuntime, totalProcessed *atomic.Int64, cons
 	return nil
 }
 
-func publishStockEvents(bus eventx.BusRuntime, batchSize int) time.Duration {
+func publishStockEvents(bus *eventx.Bus, batchSize int) time.Duration {
 	startTime := time.Now()
 
 	for i := range batchSize {

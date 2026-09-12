@@ -2,25 +2,35 @@ package eventx_test
 
 import (
 	"context"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/arcgolabs/eventx"
 )
 
 type benchmarkEvent struct {
-	ID int
+	ID      int
+	Payload string
+	At      time.Time
 }
 
 func (e benchmarkEvent) Name() string {
 	return "benchmark.event"
 }
 
-func benchmarkBusWithSubscribers(b *testing.B, parallelDispatch bool, subscribers int) eventx.BusRuntime {
+type benchmarkOtherEvent struct{}
+
+func (benchmarkOtherEvent) Name() string {
+	return "benchmark.other"
+}
+
+func benchmarkBusWithSubscribers(b *testing.B, parallelDispatch bool, subscribers int) *eventx.Bus {
 	b.Helper()
 
 	bus := eventx.New(eventx.WithParallelDispatch(parallelDispatch))
 	for range subscribers {
-		_, err := eventx.Subscribe(bus, func(_ context.Context, _ benchmarkEvent) error {
+		_, err := bus.Subscribe(func(_ context.Context, _ benchmarkEvent) error {
 			return nil
 		})
 		if err != nil {
@@ -42,9 +52,7 @@ func BenchmarkBusPublishSerial(b *testing.B) {
 	evt := benchmarkEvent{ID: 1}
 
 	b.ReportAllocs()
-	b.ResetTimer()
-
-	for range b.N {
+	for b.Loop() {
 		if err := bus.Publish(ctx, evt); err != nil {
 			b.Fatalf("publish failed: %v", err)
 		}
@@ -57,12 +65,50 @@ func BenchmarkBusPublishParallelDispatch(b *testing.B) {
 	evt := benchmarkEvent{ID: 1}
 
 	b.ReportAllocs()
-	b.ResetTimer()
-
-	for range b.N {
+	for b.Loop() {
 		if err := bus.Publish(ctx, evt); err != nil {
 			b.Fatalf("publish failed: %v", err)
 		}
+	}
+}
+
+func BenchmarkBusPublishWithoutMatchingSubscribers(b *testing.B) {
+	bus := benchmarkBusWithSubscribers(b, false, 0)
+	_, err := bus.Subscribe(func(_ context.Context, _ benchmarkOtherEvent) error { return nil })
+	if err != nil {
+		b.Fatalf("subscribe failed: %v", err)
+	}
+	ctx := context.Background()
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if err := bus.Publish(ctx, makeBenchmarkEvent()); err != nil {
+			b.Fatalf("publish failed: %v", err)
+		}
+	}
+}
+
+func BenchmarkBusPublishLazyWithoutMatchingSubscribers(b *testing.B) {
+	bus := benchmarkBusWithSubscribers(b, false, 0)
+	_, err := bus.Subscribe(func(_ context.Context, _ benchmarkOtherEvent) error { return nil })
+	if err != nil {
+		b.Fatalf("subscribe failed: %v", err)
+	}
+	ctx := context.Background()
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if err := bus.PublishLazy(ctx, makeBenchmarkEvent); err != nil {
+			b.Fatalf("publish lazy failed: %v", err)
+		}
+	}
+}
+
+func makeBenchmarkEvent() benchmarkEvent {
+	return benchmarkEvent{
+		ID:      1,
+		Payload: strings.Repeat("payload", 16),
+		At:      time.Now(),
 	}
 }
 

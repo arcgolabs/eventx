@@ -24,7 +24,7 @@ func (e userCreated) Name() string {
 	return "user.created"
 }
 
-func newTestBus(tb testing.TB, opts ...eventx.Option) eventx.BusRuntime {
+func newTestBus(tb testing.TB, opts ...eventx.Option) *eventx.Bus {
 	tb.Helper()
 	bus := eventx.New(opts...)
 	tb.Cleanup(func() {
@@ -33,7 +33,7 @@ func newTestBus(tb testing.TB, opts ...eventx.Option) eventx.BusRuntime {
 	return bus
 }
 
-func closeBus(tb testing.TB, bus eventx.BusRuntime) {
+func closeBus(tb testing.TB, bus *eventx.Bus) {
 	tb.Helper()
 	require.NoError(tb, bus.Close())
 }

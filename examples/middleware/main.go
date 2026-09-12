@@ -56,7 +56,7 @@ func main() {
 	mustPrintln("\nbus keeps running after middleware recovered the panic")
 }
 
-func newMiddlewareBus() eventx.BusRuntime {
+func newMiddlewareBus() *eventx.Bus {
 	return eventx.New(
 		eventx.WithAntsPool(4),
 		eventx.WithMiddleware(func(next eventx.HandlerFunc) eventx.HandlerFunc {
@@ -73,7 +73,7 @@ func newMiddlewareBus() eventx.BusRuntime {
 	)
 }
 
-func registerMiddlewareSubscribers(bus eventx.BusRuntime) error {
+func registerMiddlewareSubscribers(bus *eventx.Bus) error {
 	if err := subscribeUserRegistration(bus); err != nil {
 		return err
 	}
@@ -83,8 +83,8 @@ func registerMiddlewareSubscribers(bus eventx.BusRuntime) error {
 	return nil
 }
 
-func subscribeUserRegistration(bus eventx.BusRuntime) error {
-	_, err := eventx.Subscribe[userRegisteredEvent](bus,
+func subscribeUserRegistration(bus *eventx.Bus) error {
+	_, err := bus.Subscribe(
 		func(_ context.Context, event userRegisteredEvent) error {
 			mustPrintf("  handle user registration: %s (%s)\n", event.UserName, event.Email)
 
@@ -108,8 +108,8 @@ func subscribeUserRegistration(bus eventx.BusRuntime) error {
 	return nil
 }
 
-func subscribeUserLogin(bus eventx.BusRuntime) error {
-	_, err := eventx.Subscribe[userLoginEvent](bus, func(_ context.Context, event userLoginEvent) error {
+func subscribeUserLogin(bus *eventx.Bus) error {
+	_, err := bus.Subscribe(func(_ context.Context, event userLoginEvent) error {
 		mustPrintf("  handle user login: %s from %s\n", event.UserID, event.IPAddress)
 		time.Sleep(50 * time.Millisecond)
 		return nil
@@ -120,7 +120,7 @@ func subscribeUserLogin(bus eventx.BusRuntime) error {
 	return nil
 }
 
-func publishMiddlewareDemo(bus eventx.BusRuntime) {
+func publishMiddlewareDemo(bus *eventx.Bus) {
 	publishUserEvent(
 		"--- publish user registered event (normal) ---",
 		func() error {

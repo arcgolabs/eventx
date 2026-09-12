@@ -18,6 +18,7 @@ Key behavior:
 
 - `eventx.ErrBusClosed`
 - `eventx.ErrNilEvent`
+- `eventx.ErrNilEventFactory`
 - `eventx.ErrNilBus`
 - `eventx.ErrNilHandler`
 - `eventx.ErrAsyncQueueFull`
@@ -41,7 +42,7 @@ func (Ping) Name() string { return "ping" }
 func main() {
 	bus := eventx.New()
 
-	unsub, err := eventx.Subscribe[Ping](bus, func(ctx context.Context, evt Ping) error {
+	unsub, err := bus.Subscribe(func(ctx context.Context, evt Ping) error {
 		_ = ctx
 		_ = evt
 		return nil

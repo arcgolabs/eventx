@@ -3,7 +3,6 @@ package eventx_test
 import (
 	"context"
 	"errors"
-	"reflect"
 	"sync/atomic"
 	"testing"
 
@@ -11,21 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type orderCreated struct {
-	ID int
-}
-
-func (e orderCreated) Name() string {
-	return "order.created"
-}
-
 func TestPublishSync(t *testing.T) {
 	t.Parallel()
 
 	bus := newTestBus(t)
 	var got atomic.Int64
 
-	unsubscribe, err := eventx.Subscribe(bus, func(_ context.Context, evt userCreated) error {
+	unsubscribe, err := bus.Subscribe(func(_ context.Context, evt userCreated) error {
 		got.Add(int64(evt.ID))
 		return nil
 	})
@@ -52,7 +43,7 @@ func TestSubscribeNilHandler(t *testing.T) {
 
 	bus := newTestBus(t)
 
-	_, err := eventx.Subscribe[userCreated](bus, nil)
+	_, err := bus.Subscribe[userCreated](nil)
 	require.ErrorIs(t, err, eventx.ErrNilHandler)
 }
 
@@ -61,7 +52,7 @@ func TestNilBus(t *testing.T) {
 
 	var nilBus *eventx.Bus
 
-	_, err := eventx.Subscribe(nilBus, func(_ context.Context, _ userCreated) error { return nil })
+	_, err := nilBus.Subscribe(func(_ context.Context, _ userCreated) error { return nil })
 	require.ErrorIs(t, err, eventx.ErrNilBus)
 
 	err = nilBus.Publish(context.Background(), userCreated{ID: 1})
@@ -76,7 +67,7 @@ func TestPublishNilContext(t *testing.T) {
 
 	bus := newTestBus(t)
 
-	_, err := eventx.Subscribe(bus, func(ctx context.Context, _ userCreated) error {
+	_, err := bus.Subscribe(func(ctx context.Context, _ userCreated) error {
 		if ctx == nil {
 			return errors.New("nil context")
 		}
@@ -94,7 +85,7 @@ func TestUnsubscribe(t *testing.T) {
 	bus := newTestBus(t)
 	var count atomic.Int64
 
-	unsubscribe, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	unsubscribe, err := bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		count.Add(1)
 		return nil
 	})
@@ -119,7 +110,7 @@ func TestCloseRejectsNewRequests(t *testing.T) {
 	err = bus.PublishAsync(context.Background(), userCreated{ID: 1})
 	require.ErrorIs(t, err, eventx.ErrBusClosed)
 
-	_, err = eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error { return nil })
+	_, err = bus.Subscribe(func(_ context.Context, _ userCreated) error { return nil })
 	require.ErrorIs(t, err, eventx.ErrBusClosed)
 }
 
@@ -128,9 +119,9 @@ func TestSubscriberCount(t *testing.T) {
 
 	bus := newTestBus(t)
 
-	unsub1, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error { return nil })
+	unsub1, err := bus.Subscribe(func(_ context.Context, _ userCreated) error { return nil })
 	require.NoError(t, err)
-	unsub2, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error { return nil })
+	unsub2, err := bus.Subscribe(func(_ context.Context, _ userCreated) error { return nil })
 	require.NoError(t, err)
 
 	require.Equal(t, 2, bus.SubscriberCount())
@@ -140,40 +131,13 @@ func TestSubscriberCount(t *testing.T) {
 	require.Equal(t, 0, bus.SubscriberCount())
 }
 
-func TestGetHandlersGroupedByEventType(t *testing.T) {
-	t.Parallel()
-
-	bus := newTestBus(t)
-
-	_, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error { return nil })
-	require.NoError(t, err)
-	unsubscribe, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error { return nil })
-	require.NoError(t, err)
-	_, err = eventx.Subscribe(bus, func(_ context.Context, _ orderCreated) error { return nil })
-	require.NoError(t, err)
-
-	grouped := bus.GetHandlersGroupedByEventType()
-	require.Equal(t, 2, grouped.Len())
-	require.Equal(t, 3, grouped.ValueCount())
-	require.Len(t, grouped.Get(reflect.TypeFor[userCreated]()), 2)
-	require.Len(t, grouped.Get(reflect.TypeFor[orderCreated]()), 1)
-
-	grouped.Delete(reflect.TypeFor[userCreated]())
-	refreshed := bus.GetHandlersGroupedByEventType()
-	require.Len(t, refreshed.Get(reflect.TypeFor[userCreated]()), 2)
-
-	unsubscribe()
-	refreshed = bus.GetHandlersGroupedByEventType()
-	require.Len(t, refreshed.Get(reflect.TypeFor[userCreated]()), 1)
-}
-
 func TestSubscribeOnce(t *testing.T) {
 	t.Parallel()
 
 	bus := newTestBus(t)
 	var count atomic.Int64
 
-	_, err := eventx.SubscribeOnce(bus, func(_ context.Context, _ userCreated) error {
+	_, err := bus.SubscribeOnce(func(_ context.Context, _ userCreated) error {
 		count.Add(1)
 		return nil
 	})
@@ -190,7 +154,7 @@ func TestSubscribeN(t *testing.T) {
 	bus := newTestBus(t)
 	var count atomic.Int64
 
-	_, err := eventx.SubscribeN(bus, 2, func(_ context.Context, _ userCreated) error {
+	_, err := bus.SubscribeN(2, func(_ context.Context, _ userCreated) error {
 		count.Add(1)
 		return nil
 	})
@@ -207,7 +171,7 @@ func TestSubscribeNInvalidCount(t *testing.T) {
 
 	bus := newTestBus(t)
 
-	_, err := eventx.SubscribeN(bus, 0, func(_ context.Context, _ userCreated) error { return nil })
+	_, err := bus.SubscribeN(0, func(_ context.Context, _ userCreated) error { return nil })
 	require.ErrorIs(t, err, eventx.ErrInvalidSubscribeCount)
 }
 
@@ -218,12 +182,12 @@ func TestUnsubscribeInvalidatesHandlerSnapshot(t *testing.T) {
 	var first atomic.Int64
 	var second atomic.Int64
 
-	unsub1, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	unsub1, err := bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		first.Add(1)
 		return nil
 	})
 	require.NoError(t, err)
-	_, err = eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	_, err = bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		second.Add(1)
 		return nil
 	})

@@ -34,6 +34,45 @@ func (b *Bus) Publish(ctx context.Context, event Event) error {
 	return b.dispatch(ctx, event, handlers, "sync")
 }
 
+// PublishLazy constructs and publishes an event only when its concrete type has
+// active handlers. The selected handler snapshot is used for the whole publish.
+func (b *Bus) PublishLazy[T Event](ctx context.Context, factory func() T) error {
+	eventType := reflect.TypeFor[T]()
+	if b == nil {
+		return nilBusPublishError("publish_lazy", eventType)
+	}
+	if factory == nil {
+		return oops.In("eventx").
+			With("op", "publish_lazy", "expected_event_type", eventType).
+			Wrapf(ErrNilEventFactory, "eventx: validate lazy publish factory")
+	}
+
+	handlers := b.snapshotHandlersByEventType(eventType)
+	if len(handlers) == 0 {
+		if b.closed.Load() {
+			return closedPublishError("publish_lazy", "sync", eventType, "")
+		}
+		return nil
+	}
+	if !b.beginDispatch() {
+		return closedPublishError("publish_lazy", "sync", eventType, "")
+	}
+	defer b.dispatchWG.Done()
+
+	event := factory()
+	if isNilEvent(event) {
+		return oops.In("eventx").
+			With("op", "publish_lazy", "expected_event_type", eventType).
+			Wrapf(ErrNilEvent, "eventx: validate lazy publish event")
+	}
+	ctx = normalizeContext(ctx)
+	b.logger.Debug("publish lazy sync",
+		"event_name", eventName(event),
+		"handler_count", len(handlers),
+	)
+	return b.dispatch(ctx, event, handlers, "sync")
+}
+
 // PublishAsync enqueues one event for asynchronous dispatch.
 func (b *Bus) PublishAsync(ctx context.Context, event Event) error {
 	if err := validatePublishRequest("publish_async", b, event); err != nil {
@@ -102,9 +141,7 @@ func (b *Bus) executeTask(task publishTask) {
 
 func validatePublishRequest(op string, b *Bus, event Event) error {
 	if b == nil {
-		return oops.In("eventx").
-			With("op", op, "event_type", reflect.TypeOf(event)).
-			Wrapf(ErrNilBus, "eventx: validate publish bus")
+		return nilBusPublishError(op, reflect.TypeOf(event))
 	}
 	if event == nil {
 		return oops.In("eventx").
@@ -112,6 +149,30 @@ func validatePublishRequest(op string, b *Bus, event Event) error {
 			Wrapf(ErrNilEvent, "eventx: validate publish event")
 	}
 	return nil
+}
+
+func nilBusPublishError(op string, eventType reflect.Type) error {
+	return oops.In("eventx").
+		With("op", op, "event_type", eventType).
+		Wrapf(ErrNilBus, "eventx: validate publish bus")
+}
+
+func closedPublishError(op, mode string, eventType reflect.Type, eventName string) error {
+	return oops.In("eventx").
+		With("op", op, "mode", mode, "event_name", eventName, "event_type", eventType).
+		Wrapf(ErrBusClosed, "eventx: publish %s", mode)
+}
+
+func isNilEvent(event Event) bool {
+	if event == nil {
+		return true
+	}
+	value := reflect.ValueOf(event)
+	kind := value.Kind()
+	canBeNil := kind == reflect.Chan || kind == reflect.Func ||
+		kind == reflect.Interface || kind == reflect.Map ||
+		kind == reflect.Pointer || kind == reflect.Slice
+	return canBeNil && value.IsNil()
 }
 
 func (b *Bus) asyncRuntimeUnavailable() error {

@@ -19,7 +19,7 @@ type EventResult struct {
 	fx.Out
 
 	// Bus is the created event bus.
-	Bus eventx.BusRuntime
+	Bus *eventx.Bus
 }
 
 // NewEventBus creates a new event bus.

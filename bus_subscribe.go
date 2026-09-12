@@ -10,7 +10,7 @@ import (
 )
 
 // Subscribe registers a strongly typed handler and returns an unsubscribe function.
-func Subscribe[T Event](b BusRuntime, handler func(context.Context, T) error, opts ...SubscribeOption) (func(), error) {
+func (b *Bus) Subscribe[T Event](handler func(context.Context, T) error, opts ...SubscribeOption) (func(), error) {
 	eventType := reflect.TypeFor[T]()
 	if b == nil {
 		return nil, oops.In("eventx").
@@ -24,20 +24,20 @@ func Subscribe[T Event](b BusRuntime, handler func(context.Context, T) error, op
 	}
 
 	cfg := buildSubscribeOptions(opts...)
-	_, base := typedEventHandler(handler)
+	base := typedEventHandler(handler)
 
 	return b.subscribe(eventType, base, cfg.middleware, 0)
 }
 
 // SubscribeOnce registers a strongly typed handler that will auto-unsubscribe
 // after handling one event.
-func SubscribeOnce[T Event](b BusRuntime, handler func(context.Context, T) error, opts ...SubscribeOption) (func(), error) {
-	return SubscribeN(b, 1, handler, opts...)
+func (b *Bus) SubscribeOnce[T Event](handler func(context.Context, T) error, opts ...SubscribeOption) (func(), error) {
+	return b.SubscribeN(1, handler, opts...)
 }
 
 // SubscribeN registers a strongly typed handler that will auto-unsubscribe
 // after handling n events.
-func SubscribeN[T Event](b BusRuntime, n int, handler func(context.Context, T) error, opts ...SubscribeOption) (func(), error) {
+func (b *Bus) SubscribeN[T Event](n int, handler func(context.Context, T) error, opts ...SubscribeOption) (func(), error) {
 	eventType := reflect.TypeFor[T]()
 	if n <= 0 {
 		return nil, oops.In("eventx").
@@ -56,14 +56,14 @@ func SubscribeN[T Event](b BusRuntime, n int, handler func(context.Context, T) e
 	}
 
 	cfg := buildSubscribeOptions(opts...)
-	_, base := typedEventHandler(handler)
+	base := typedEventHandler(handler)
 
 	return b.subscribe(eventType, base, cfg.middleware, n)
 }
 
-func typedEventHandler[T Event](handler func(context.Context, T) error) (reflect.Type, HandlerFunc) {
+func typedEventHandler[T Event](handler func(context.Context, T) error) HandlerFunc {
 	eventType := reflect.TypeFor[T]()
-	return eventType, func(ctx context.Context, event Event) error {
+	return func(ctx context.Context, event Event) error {
 		typed, ok := any(event).(T)
 		if !ok {
 			return oops.In("eventx").
@@ -93,28 +93,17 @@ func (b *Bus) subscribe(eventType reflect.Type, base HandlerFunc, subscriberMidd
 }
 
 func (b *Bus) snapshotHandlersByEventType(eventType reflect.Type) []HandlerFunc {
-	if cached, ok := b.handlerCache.Get(eventType); ok {
-		return cached
-	}
-
-	row := b.subsByType.Row(eventType)
-	if len(row) == 0 {
+	if b == nil || b.handlerCache == nil {
 		return nil
 	}
-
-	snapshot := make([]HandlerFunc, 0, len(row))
-	for _, sub := range row {
-		if sub == nil || sub.handler == nil {
-			continue
-		}
-		snapshot = append(snapshot, sub.handler)
-	}
-	b.handlerCache.Set(eventType, snapshot)
-	b.logger.Debug("handler snapshot rebuilt",
-		"event_type", eventType.String(),
-		"handler_count", len(snapshot),
-	)
+	snapshot, _ := b.handlerCache.Get(eventType)
 	return snapshot
+}
+
+// HasSubscribers reports whether the event type currently has active handlers.
+// Use PublishLazy when the check and publish must share one handler snapshot.
+func (b *Bus) HasSubscribers[T Event]() bool {
+	return len(b.snapshotHandlersByEventType(reflect.TypeFor[T]())) > 0
 }
 
 func (b *Bus) subscriptionHandler(base HandlerFunc, subscriberMiddleware []Middleware) HandlerFunc {

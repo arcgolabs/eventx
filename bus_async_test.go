@@ -17,7 +17,7 @@ func TestPublishAsyncNilContext(t *testing.T) {
 	bus := newTestBus(t, eventx.WithAntsPool(1))
 	nilCtx := make(chan bool, 1)
 
-	_, err := eventx.Subscribe(bus, func(ctx context.Context, _ userCreated) error {
+	_, err := bus.Subscribe(func(ctx context.Context, _ userCreated) error {
 		nilCtx <- ctx == nil
 		return nil
 	})
@@ -40,7 +40,7 @@ func TestPublishAsyncAndCloseDrain(t *testing.T) {
 	bus := newTestBus(t, eventx.WithAntsPool(2))
 	var count atomic.Int64
 
-	_, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	_, err := bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		count.Add(1)
 		return nil
 	})
@@ -60,7 +60,7 @@ func TestPublishAsyncWithDefaultAntsPool(t *testing.T) {
 	bus := newTestBus(t)
 	var count atomic.Int64
 
-	_, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	_, err := bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		count.Add(1)
 		return nil
 	})
@@ -84,7 +84,7 @@ func TestAsyncErrorHandler(t *testing.T) {
 		}),
 	)
 
-	_, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	_, err := bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		return errors.New("boom")
 	})
 	require.NoError(t, err)
@@ -99,7 +99,7 @@ func TestAsyncCloseWhilePublishing(t *testing.T) {
 
 	bus := newTestBus(t, eventx.WithAntsPool(1))
 
-	_, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	_, err := bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		time.Sleep(2 * time.Millisecond)
 		return nil
 	})
@@ -139,7 +139,7 @@ func TestSubscribeOnceStrictUnderConcurrentPublish(t *testing.T) {
 	bus := newTestBus(t, eventx.WithAntsPool(4))
 	var count atomic.Int64
 
-	_, err := eventx.SubscribeOnce(bus, func(_ context.Context, _ userCreated) error {
+	_, err := bus.SubscribeOnce(func(_ context.Context, _ userCreated) error {
 		count.Add(1)
 		time.Sleep(time.Millisecond)
 		return nil
@@ -159,7 +159,7 @@ func TestSubscribeNStrictUnderConcurrentPublish(t *testing.T) {
 	bus := newTestBus(t, eventx.WithAntsPool(4))
 	var count atomic.Int64
 
-	_, err := eventx.SubscribeN(bus, 2, func(_ context.Context, _ userCreated) error {
+	_, err := bus.SubscribeN(2, func(_ context.Context, _ userCreated) error {
 		count.Add(1)
 		time.Sleep(time.Millisecond)
 		return nil
@@ -183,7 +183,7 @@ func TestParallelDispatchUsesGlobalLimiter(t *testing.T) {
 	release := make(chan struct{})
 
 	for range 4 {
-		_, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+		_, err := bus.Subscribe(func(_ context.Context, _ userCreated) error {
 			current := active.Add(1)
 			started <- struct{}{}
 			updateMax(&maxActive, current)

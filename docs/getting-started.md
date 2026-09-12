@@ -43,7 +43,7 @@ func main() {
 	bus := eventx.New()
 	defer func() { _ = bus.Close() }()
 
-	unsub, err := eventx.Subscribe[UserCreated](bus, func(ctx context.Context, evt UserCreated) error {
+	unsub, err := bus.Subscribe(func(ctx context.Context, evt UserCreated) error {
 		_ = ctx
 		fmt.Println("user created:", evt.ID)
 		return nil
@@ -58,6 +58,20 @@ func main() {
 	}
 }
 ```
+
+## Lazy publish
+
+Use `PublishLazy` when creating an event is optional work. The factory is not
+called when the concrete event type has no active handlers:
+
+```go
+err := bus.PublishLazy(context.Background(), func() UserCreated {
+	return UserCreated{ID: expensiveUserID()}
+})
+```
+
+The handler snapshot is selected before the factory runs. A concurrent
+unsubscribe does not remove a handler already selected for that publish.
 
 ## 3) Run
 

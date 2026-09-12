@@ -40,7 +40,7 @@ func main() {
 		}
 	}()
 
-	_, err := eventx.Subscribe[orderCreatedEvent](bus, func(_ context.Context, event orderCreatedEvent) error {
+	_, err := bus.Subscribe(func(_ context.Context, event orderCreatedEvent) error {
 		mustPrintf("send welcome email to %s (order: %s)\n", event.UserID, event.OrderID)
 		time.Sleep(100 * time.Millisecond)
 		return nil
@@ -49,7 +49,7 @@ func main() {
 		panic(err)
 	}
 
-	_, err = eventx.Subscribe[orderCreatedEvent](bus, func(_ context.Context, event orderCreatedEvent) error {
+	_, err = bus.Subscribe(func(_ context.Context, event orderCreatedEvent) error {
 		mustPrintf("init order analytics: %s, amount: %.2f\n", event.OrderID, event.Amount)
 		return nil
 	})
@@ -57,7 +57,7 @@ func main() {
 		panic(err)
 	}
 
-	_, err = eventx.Subscribe[orderPaidEvent](bus, func(_ context.Context, event orderPaidEvent) error {
+	_, err = bus.Subscribe(func(_ context.Context, event orderPaidEvent) error {
 		mustPrintf("update inventory for order: %s\n", event.OrderID)
 		return nil
 	})
@@ -65,7 +65,7 @@ func main() {
 		panic(err)
 	}
 
-	_, err = eventx.Subscribe[orderPaidEvent](bus, func(_ context.Context, event orderPaidEvent) error {
+	_, err = bus.Subscribe(func(_ context.Context, event orderPaidEvent) error {
 		mustPrintf("send payment confirmation for order: %s\n", event.OrderID)
 		return nil
 	})

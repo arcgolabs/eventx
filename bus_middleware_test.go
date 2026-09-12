@@ -25,7 +25,7 @@ func TestMiddlewareOrder(t *testing.T) {
 		}),
 	)
 
-	_, err := eventx.Subscribe(bus,
+	_, err := bus.Subscribe(
 		func(_ context.Context, _ userCreated) error {
 			order = append(order, "handler")
 			return nil
@@ -56,7 +56,7 @@ func TestRecoverMiddleware(t *testing.T) {
 
 	bus := newTestBus(t, eventx.WithMiddleware(eventx.RecoverMiddleware()))
 
-	_, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	_, err := bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		panic("boom")
 	})
 	require.NoError(t, err)
@@ -73,14 +73,14 @@ func TestParallelDispatchHandlersRunConcurrently(t *testing.T) {
 	started := make(chan struct{}, 2)
 	release := make(chan struct{})
 
-	_, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	_, err := bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		started <- struct{}{}
 		<-release
 		return nil
 	})
 	require.NoError(t, err)
 
-	_, err = eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	_, err = bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		started <- struct{}{}
 		<-release
 		return nil
@@ -108,12 +108,12 @@ func TestParallelDispatchJoinErrors(t *testing.T) {
 
 	bus := newTestBus(t, eventx.WithParallelDispatch(true))
 
-	_, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	_, err := bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		return errors.New("err-a")
 	})
 	require.NoError(t, err)
 
-	_, err = eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	_, err = bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		return errors.New("err-b")
 	})
 	require.NoError(t, err)
@@ -131,7 +131,7 @@ func TestCloseWaitsInFlightSyncDispatch(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
 
-	_, err := eventx.Subscribe(bus, func(_ context.Context, _ userCreated) error {
+	_, err := bus.Subscribe(func(_ context.Context, _ userCreated) error {
 		close(started)
 		<-release
 		return nil

@@ -53,7 +53,7 @@ func newApp() *fx.App {
 	)
 }
 
-func registerNotificationSubscribers(bus eventx.BusRuntime, logger *slog.Logger) error {
+func registerNotificationSubscribers(bus *eventx.Bus, logger *slog.Logger) error {
 	logger.Info("registering notification subscribers")
 
 	for _, cfg := range []subscriberConfig{
@@ -75,13 +75,13 @@ type subscriberConfig struct {
 	logLabel string
 }
 
-func subscribeNotificationType(bus eventx.BusRuntime, logger *slog.Logger, cfg subscriberConfig) error {
-	_, err := eventx.Subscribe[notificationEvent](bus, func(_ context.Context, event notificationEvent) error {
+func subscribeNotificationType(bus *eventx.Bus, logger *slog.Logger, cfg subscriberConfig) error {
+	_, err := bus.Subscribe(func(_ context.Context, event notificationEvent) error {
 		if event.Type != cfg.msgType {
 			return nil
 		}
 
-		logx.WithFields(logger, collectionmapping.NewMapFrom(map[string]any{
+		logx.Enrich(logger).WithFields(collectionmapping.NewMapFrom(map[string]any{
 			"user_id":  event.UserID,
 			"msg_type": cfg.msgType,
 		})).Info(cfg.logLabel)
@@ -95,7 +95,7 @@ func subscribeNotificationType(bus eventx.BusRuntime, logger *slog.Logger, cfg s
 	return nil
 }
 
-func registerPublishHook(lc fx.Lifecycle, bus eventx.BusRuntime, logger *slog.Logger) {
+func registerPublishHook(lc fx.Lifecycle, bus *eventx.Bus, logger *slog.Logger) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			return publishNotifications(ctx, bus, logger)
@@ -103,7 +103,7 @@ func registerPublishHook(lc fx.Lifecycle, bus eventx.BusRuntime, logger *slog.Lo
 	})
 }
 
-func publishNotifications(ctx context.Context, bus eventx.BusRuntime, logger *slog.Logger) error {
+func publishNotifications(ctx context.Context, bus *eventx.Bus, logger *slog.Logger) error {
 	logger.Info("publishing notification events")
 	mustPrintln("\n=== publish notification events ===")
 
@@ -115,7 +115,7 @@ func publishNotifications(ctx context.Context, bus eventx.BusRuntime, logger *sl
 	}
 
 	for i, event := range events {
-		logx.WithFields(logger, collectionmapping.NewMapFrom(map[string]any{
+		logx.Enrich(logger).WithFields(collectionmapping.NewMapFrom(map[string]any{
 			"index":   i + 1,
 			"type":    event.Type,
 			"user_id": event.UserID,
@@ -123,7 +123,7 @@ func publishNotifications(ctx context.Context, bus eventx.BusRuntime, logger *sl
 		})).Info("publish notification event")
 
 		if err := bus.PublishAsync(ctx, event); err != nil {
-			logx.WithError(logx.WithFields(logger, collectionmapping.NewMapFrom(map[string]any{
+			logx.WithError(logx.Enrich(logger).WithFields(collectionmapping.NewMapFrom(map[string]any{
 				"event": event,
 			})), err).Error("publish event failed")
 		}

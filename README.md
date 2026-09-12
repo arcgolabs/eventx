@@ -9,6 +9,8 @@ weight: 4
 
 `eventx` is an in-process, strongly typed event bus for Go services.
 
+eventx requires Go 1.27 or newer. Its primary API uses generic methods.
+
 ## Install / Import
 
 ```bash
@@ -18,6 +20,8 @@ go get github.com/arcgolabs/eventx@latest
 ## Current capabilities
 
 - Generic type subscription: `Subscribe[T Event]`
+- Typed lazy publishing: `PublishLazy[T Event]`
+- Cheap typed subscriber checks: `HasSubscribers[T Event]`
 - Synchronous publishing: `Publish`
 - Asynchronous publishing with queue/workers: `PublishAsync`
 - Optional parallel dispatch for handlers of the same event type
@@ -31,7 +35,6 @@ go get github.com/arcgolabs/eventx@latest
 
 ## Documentation map
 
-- Release notes: [eventx v0.3.0](./release-v0.3.0)
 - Minimal sync pub/sub: [Getting Started](./getting-started)
 - Async + middleware: [Async and middleware](./async-and-middleware)
 - Errors, Close semantics, ordering notes: [Errors and lifecycle](./errors-and-lifecycle)
@@ -49,11 +52,17 @@ Routing is based on the event’s concrete Go type. `Name()` is semantic metadat
 ## Key API surface (summary)
 
 - `eventx.New(opts...)`
-- `eventx.Subscribe[T](bus, handler, subscriberOpts...)`
+- `bus.Subscribe(handler, subscriberOpts...)`
+- `bus.PublishLazy(ctx, factory)`
+- `bus.HasSubscribers[T]()`
 - `bus.Publish(ctx, event)`
 - `bus.PublishAsync(ctx, event)`
 - `bus.SubscriberCount()`
 - `bus.Close()`
+
+`New` returns `*eventx.Bus`, which exposes the Go 1.27 generic methods. Keep the
+concrete pointer at dependency-injection boundaries because Go interfaces cannot
+declare generic methods.
 
 ## Runnable examples (repository)
 

@@ -7,6 +7,8 @@ var (
 	ErrBusClosed = errors.New("eventx: bus is closed")
 	// ErrNilEvent indicates that publish received a nil event.
 	ErrNilEvent = errors.New("eventx: event is nil")
+	// ErrNilEventFactory indicates that lazy publish received a nil factory.
+	ErrNilEventFactory = errors.New("eventx: event factory is nil")
 	// ErrNilHandler indicates that subscribe received a nil handler.
 	ErrNilHandler = errors.New("eventx: handler is nil")
 	// ErrNilBus indicates that operation received a nil bus.

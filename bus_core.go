@@ -4,32 +4,32 @@ import (
 	"log/slog"
 	"reflect"
 	"sync"
+	"sync/atomic"
 
 	collectionlist "github.com/arcgolabs/collectionx/list"
 	collectionmapping "github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/observabilityx"
 	"github.com/arcgolabs/pkg/option"
 	"github.com/panjf2000/ants/v2"
-	"github.com/samber/lo"
-	"github.com/samber/mo"
 )
 
 // Bus is an in-memory strongly typed event bus.
 type Bus struct {
-	lifecycleMu   sync.Mutex
-	closed        bool
-	nextID        uint64
-	subsByType    subscriptionTable
-	handlerCache  *collectionmapping.ConcurrentMap[reflect.Type, []HandlerFunc]
-	parallel      bool
-	parallelLimit chan struct{}
-	middleware    []Middleware
-	onAsyncErr    asyncErrorHandler
-	antsPool      *ants.Pool
-	initErr       error
-	dispatchWG    sync.WaitGroup
-	observability observabilityx.Observability
-	logger        *slog.Logger
+	lifecycleMu    sync.Mutex
+	closed         atomic.Bool
+	subscriptionMu sync.Mutex
+	nextID         uint64
+	subsByType     subscriptionTable
+	handlerCache   *collectionmapping.ConcurrentMap[reflect.Type, []HandlerFunc]
+	parallel       bool
+	parallelLimit  chan struct{}
+	middleware     []Middleware
+	onAsyncErr     asyncErrorHandler
+	antsPool       *ants.Pool
+	initErr        error
+	dispatchWG     sync.WaitGroup
+	observability  observabilityx.Observability
+	logger         *slog.Logger
 }
 
 const (
@@ -71,7 +71,7 @@ var (
 )
 
 // New creates a new Bus runtime.
-func New(opts ...Option) BusRuntime {
+func New(opts ...Option) *Bus {
 	cfg := defaultOptions()
 	option.Apply(&cfg, opts...)
 
@@ -121,11 +121,11 @@ func (b *Bus) Close() error {
 
 	var pool *ants.Pool
 	b.lifecycleMu.Lock()
-	if b.closed {
+	if b.closed.Load() {
 		b.lifecycleMu.Unlock()
 		return nil
 	}
-	b.closed = true
+	b.closed.Store(true)
 	pool = b.antsPool
 	b.lifecycleMu.Unlock()
 
@@ -149,19 +149,6 @@ func (b *Bus) SubscriberCount() int {
 	return b.subsByType.Len()
 }
 
-// GetHandlersGroupedByEventType returns a snapshot of active handlers grouped by event type.
-func (b *Bus) GetHandlersGroupedByEventType() *collectionmapping.MultiMap[reflect.Type, HandlerFunc] {
-	if b == nil {
-		return collectionmapping.NewMultiMap[reflect.Type, HandlerFunc]()
-	}
-
-	grouped := collectionmapping.NewMultiMapWithCapacity[reflect.Type, HandlerFunc](b.subsByType.RowCount())
-	lo.ForEach(b.subsByType.RowKeys(), func(eventType reflect.Type, _ int) {
-		grouped.Set(eventType, b.snapshotHandlersByEventType(eventType)...)
-	})
-	return grouped
-}
-
 func (b *Bus) beginDispatch() bool {
 	if b == nil {
 		return false
@@ -169,7 +156,7 @@ func (b *Bus) beginDispatch() bool {
 
 	b.lifecycleMu.Lock()
 	defer b.lifecycleMu.Unlock()
-	if b.closed {
+	if b.closed.Load() {
 		return false
 	}
 	b.dispatchWG.Add(1)
@@ -183,20 +170,23 @@ func (b *Bus) registerSubscription(eventType reflect.Type, buildHandler func(id 
 
 	b.lifecycleMu.Lock()
 	defer b.lifecycleMu.Unlock()
-	if b.closed {
+	if b.closed.Load() {
 		return 0, ErrBusClosed
 	}
 	b.nextID++
 	id := b.nextID
-	handler := HandlerFunc(nil)
-	if factory, ok := mo.TupleToOption(buildHandler, buildHandler != nil).Get(); ok {
-		handler = factory(id)
+	var handler HandlerFunc
+	if buildHandler != nil {
+		handler = buildHandler(id)
 	}
+
+	b.subscriptionMu.Lock()
+	defer b.subscriptionMu.Unlock()
 	b.subsByType.Put(eventType, id, &subscription{
 		id:      id,
 		handler: handler,
 	})
-	b.invalidateHandlerSnapshot(eventType)
+	b.rebuildHandlerSnapshotLocked(eventType)
 	b.logger.Debug("subscription registered",
 		"event_type", eventType.String(),
 		"subscription_id", id,
@@ -204,19 +194,34 @@ func (b *Bus) registerSubscription(eventType reflect.Type, buildHandler func(id 
 	return id, nil
 }
 
-func (b *Bus) invalidateHandlerSnapshot(eventType reflect.Type) {
+func (b *Bus) rebuildHandlerSnapshotLocked(eventType reflect.Type) {
 	if b == nil || b.handlerCache == nil {
 		return
 	}
-	b.handlerCache.Delete(eventType)
+
+	row := b.subsByType.Row(eventType)
+	snapshot := make([]HandlerFunc, 0, len(row))
+	for _, sub := range row {
+		if sub == nil || sub.handler == nil {
+			continue
+		}
+		snapshot = append(snapshot, sub.handler)
+	}
+	b.handlerCache.Set(eventType, snapshot)
+	b.logger.Debug("handler snapshot rebuilt",
+		"event_type", eventType.String(),
+		"handler_count", len(snapshot),
+	)
 }
 
 func (b *Bus) deleteSubscription(eventType reflect.Type, id uint64) {
 	if b == nil {
 		return
 	}
+	b.subscriptionMu.Lock()
+	defer b.subscriptionMu.Unlock()
 	if b.subsByType.Delete(eventType, id) {
-		b.invalidateHandlerSnapshot(eventType)
+		b.rebuildHandlerSnapshotLocked(eventType)
 		b.logger.Debug("subscription removed",
 			"event_type", eventType.String(),
 			"subscription_id", id,
